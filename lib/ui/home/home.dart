@@ -1,6 +1,7 @@
 import 'package:app_listen_music/data/model/song.dart';
 import 'package:app_listen_music/ui/discovery/discovery.dart';
 import 'package:app_listen_music/ui/home/viewmodel.dart';
+import 'package:app_listen_music/ui/now_playing/audio_player_manager.dart';
 import 'package:app_listen_music/ui/now_playing/playing.dart';
 import 'package:app_listen_music/ui/settings/settings.dart';
 import 'package:app_listen_music/ui/user/user.dart';
@@ -124,6 +125,7 @@ class _HomeTabPageState extends State<HomeTabPage> {
   @override
   void dispose() {
     _viewModel.songStream.close();
+    AudioPlayerManager().dispose();
     super.dispose();
   }
 
@@ -185,17 +187,17 @@ class _HomeTabPageState extends State<HomeTabPage> {
           return ClipRRect(
             borderRadius: const BorderRadius.vertical(top: Radius.circular(18)),
             child: Container(
-              height: 600,
-              color: Colors.grey,
+              height: 300,
+              color: Colors.white,
               child: Center(
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
                   mainAxisSize: MainAxisSize.min,
                   children: <Widget>[
-                    const Text('Modal Bottom Sheet'),
+                    const Text('Danh sách phát'),
                     ElevatedButton(
                         onPressed: () => Navigator.pop(context),
-                        child: const Text('Close bottom sheet'))
+                        child: const Text('Thêm'))
                   ],
                 ),
               ),

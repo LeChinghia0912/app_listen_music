@@ -1,3 +1,5 @@
+import 'dart:math';
+
 import 'package:app_listen_music/data/model/song.dart';
 import 'package:app_listen_music/ui/now_playing/audio_player_manager.dart';
 import 'package:audio_video_progress_bar/audio_video_progress_bar.dart';
@@ -38,21 +40,29 @@ class _NowPlayingPageState extends State<NowPlayingPage>
     with SingleTickerProviderStateMixin {
   late AnimationController _imageAnimController;
   late AudioPlayerManager _audioPlayerManager;
-  late int _selectItemIndex;
+  late int _selectedItemIndex;
   late Song _song;
-
+  double _currentAnimationPosition = 0.0;
+  bool _isShuffle = false;
+  late LoopMode _loopMode;
 
   @override
   void initState() {
-    // TODO: implement initState
     super.initState();
+    _currentAnimationPosition = 0.0;
     _song = widget.playingSong;
     _imageAnimController = AnimationController(
-        vsync: this, duration: const Duration(microseconds: 12000));
-    _audioPlayerManager =
-        AudioPlayerManager(songUrl: _song.source);
-    _audioPlayerManager.init();
-    _selectItemIndex = widget.songs.indexOf(widget.playingSong);
+        vsync: this,
+        duration: const Duration(seconds: 10, microseconds: 12000));
+    _audioPlayerManager = AudioPlayerManager();
+    if (_audioPlayerManager.songUrl.compareTo(_song.source) != 0) {
+      _audioPlayerManager.updateSongUrl(_song.source);
+      _audioPlayerManager.prepare(isNewSong: true);
+    } else {
+      _audioPlayerManager.prepare(isNewSong: false);
+    }
+    _selectedItemIndex = widget.songs.indexOf(widget.playingSong);
+    _loopMode = LoopMode.off;
   }
 
   @override
@@ -163,8 +173,7 @@ class _NowPlayingPageState extends State<NowPlayingPage>
 
   @override
   void dispose() {
-    // TODO: implement dispose
-    _audioPlayerManager.dispose();
+    _imageAnimController.dispose();
     super.dispose();
   }
 
@@ -173,27 +182,27 @@ class _NowPlayingPageState extends State<NowPlayingPage>
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceAround,
         children: [
-          const MediaButtonControl(
-              function: null,
+          MediaButtonControl(
+              function: _setShuffle,
               icon: Icons.shuffle,
-              color: Colors.blueAccent,
+              color: _getShuffleColor(),
               size: 24),
-           MediaButtonControl(
+          MediaButtonControl(
               function: _setPrevSong,
               icon: Icons.skip_previous,
               color: Colors.blueAccent,
               size: 36),
           // nút play
           _playButton(),
-           MediaButtonControl(
+          MediaButtonControl(
               function: _setNextSong,
               icon: Icons.skip_next,
               color: Colors.blueAccent,
               size: 36),
-          const MediaButtonControl(
-              function: null,
-              icon: Icons.repeat,
-              color: Colors.blueAccent  ,
+          MediaButtonControl(
+              function: _setupRepeatOption,
+              icon: _repeatingIcon(),
+              color: _getRepeatingIconColor(),
               size: 24),
         ],
       ),
@@ -228,69 +237,156 @@ class _NowPlayingPageState extends State<NowPlayingPage>
   }
 
   StreamBuilder<PlayerState> _playButton() {
-    return StreamBuilder<PlayerState>(
-      stream: _audioPlayerManager.player.playerStateStream,
-      builder: (context, snapshot) {
-        final playState = snapshot.data;
-        final processingState = playState?.processingState;
-        final playing = playState?.playing;
+    return StreamBuilder(
+        stream: _audioPlayerManager.player.playerStateStream,
+        builder: (context, snapshot) {
+          final playState = snapshot.data;
+          final processingState = playState?.processingState;
+          final playing = playState?.playing;
 
-        if (processingState == ProcessingState.loading ||
-            processingState == ProcessingState.buffering) {
-          return Container(
-            margin: const EdgeInsets.all(8),
-            width: 48,
-            height: 48,
-            child: const CircularProgressIndicator(),
-          );
-        } else if (playing != true) {
-          return MediaButtonControl(
-            function: () {
-              _audioPlayerManager.player.play();
-            },
-            icon: Icons.play_arrow,
-            color: Colors.blueAccent,
-            size: 48,
-          );
-        } else if (processingState == ProcessingState.completed) {
-          return MediaButtonControl(
-            function: () {
-              _audioPlayerManager.player.seek(Duration.zero);
-            },
-            icon: Icons.replay,
-            color: null,
-            size: 48,
-          );
-        } else {
-          return MediaButtonControl(
-            function: () {
-              _audioPlayerManager.player.pause();
-            },
-            icon: Icons.pause,
-            color: Colors.blueAccent,
-            size: 48,
-          );
-        }
-      },
-    );
+          if (processingState == ProcessingState.loading ||
+              processingState == ProcessingState.buffering) {
+            // todo: pause animation
+            _pauseRotationAnim();
+            return Container(
+              margin: const EdgeInsets.all(8),
+              width: 48,
+              height: 48,
+              child: const CircularProgressIndicator(),
+            );
+          } else if (playing != true) {
+            return MediaButtonControl(
+                function: () {
+                  _audioPlayerManager.player.play();
+                  _imageAnimController.forward(from: _currentAnimationPosition);
+                  _imageAnimController.repeat();
+                },
+                icon: Icons.play_arrow,
+                color: Colors.blueAccent,
+                size: 48);
+          } else if (processingState != ProcessingState.completed) {
+            _playRotationAnim();
+            return MediaButtonControl(
+                function: () {
+                  _audioPlayerManager.player.pause();
+                  _pauseRotationAnim();
+                },
+                icon: Icons.pause,
+                color: Colors.blueAccent,
+                size: 48);
+          } else {
+            if (processingState == ProcessingState.completed) {
+              _stopRotationAnim();
+              _resetRotationAnim();
+            }
+            return MediaButtonControl(
+                function: () {
+                  _audioPlayerManager.player.seek(Duration.zero);
+                  _resetRotationAnim();
+                  _playRotationAnim();
+                },
+                icon: Icons.replay,
+                color: Colors.blueAccent,
+                size: 48);
+          }
+        });
+  }
+
+  void _setShuffle() {
+    setState(() {
+      _isShuffle = !_isShuffle;
+    });
+  }
+
+  Color? _getShuffleColor() {
+    return _isShuffle ? Colors.blue : Colors.grey;
   }
 
   void _setNextSong() {
-    ++_selectItemIndex;
-    final nextSong = widget.songs[_selectItemIndex];
+    if (_isShuffle) {
+      var random = Random();
+      _selectedItemIndex = random.nextInt(widget.songs.length);
+    } else if (_selectedItemIndex < widget.songs.length - 1) {
+      _selectedItemIndex++;
+    } else if (_loopMode == LoopMode.all &&
+        _selectedItemIndex == widget.songs.length - 1) {
+      _selectedItemIndex = 0;
+      if (_selectedItemIndex >= widget.songs.length) {
+        _selectedItemIndex = _selectedItemIndex & widget.songs.length;
+      }
+    }
+
+    final nextSong = widget.songs[_selectedItemIndex];
     _audioPlayerManager.updateSongUrl(nextSong.source);
+    _resetRotationAnim();
     setState(() {
       _song = nextSong;
     });
   }
 
   void _setPrevSong() {
-    --_selectItemIndex;
-    final nextSong = widget.songs[_selectItemIndex];
-    _audioPlayerManager.updateSongUrl(nextSong.source);
+    if (_isShuffle) {
+      var random = Random();
+      _selectedItemIndex = random.nextInt(widget.songs.length);
+    } else if (_selectedItemIndex > 0) {
+      _selectedItemIndex--;
+    } else if (_loopMode == LoopMode.all && _selectedItemIndex == 0) {
+      _selectedItemIndex = widget.songs.length - 1;
+    }
+    if (_selectedItemIndex < 0) {
+      _selectedItemIndex = widget.songs.length - 1; // Quay về cuối danh sách
+    }
+
+    final prevSong = widget.songs[_selectedItemIndex];
+    _audioPlayerManager.updateSongUrl(prevSong.source);
+    _resetRotationAnim();
     setState(() {
-      _song = nextSong;
+      _song = prevSong;
     });
+  }
+
+  void _setupRepeatOption() {
+    if (_loopMode == LoopMode.off) {
+      _loopMode = LoopMode.one;
+    } else if (_loopMode == LoopMode.one) {
+      _loopMode = LoopMode.all;
+    } else {
+      _loopMode = LoopMode.off;
+    }
+    setState(() {
+      _audioPlayerManager.player.setLoopMode(_loopMode);
+    });
+  }
+
+  IconData _repeatingIcon() {
+    return switch (_loopMode) {
+      LoopMode.one => Icons.repeat_one,
+      LoopMode.all => Icons.repeat_on,
+      _ => Icons.repeat
+    };
+  }
+
+  Color? _getRepeatingIconColor() {
+    return _loopMode == LoopMode.off ? Colors.grey : Colors.blueAccent;
+  }
+
+  void _playRotationAnim() {
+    _imageAnimController.forward(from: _currentAnimationPosition);
+    _imageAnimController.repeat();
+  }
+
+  void _pauseRotationAnim() {
+    _stopRotationAnim();
+    _currentAnimationPosition = _imageAnimController.value;
+  }
+
+  void _stopRotationAnim() {
+    _imageAnimController.stop();
+  }
+
+  void _resetRotationAnim() {
+    _currentAnimationPosition = 0.0;
+    _imageAnimController.value = _currentAnimationPosition;
   }
 }
 
@@ -315,7 +411,6 @@ class MediaButtonControl extends StatefulWidget {
 class _MediaButtonControlState extends State<MediaButtonControl> {
   @override
   Widget build(BuildContext context) {
-    // TODO: implement build
     return IconButton(
       onPressed: widget.function,
       icon: Icon(widget.icon),
