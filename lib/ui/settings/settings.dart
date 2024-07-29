@@ -2,7 +2,14 @@ import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 
 class SettingsTab extends StatefulWidget {
-  const SettingsTab({super.key});
+  final Function(bool) onThemeChanged;
+  final bool isDarkMode;
+
+  const SettingsTab({
+    required this.onThemeChanged,
+    required this.isDarkMode,
+    super.key,
+  });
 
   @override
   _SettingsTabState createState() => _SettingsTabState();
@@ -14,14 +21,37 @@ class _SettingsTabState extends State<SettingsTab> {
   bool switchValue3 = false;
 
   @override
+  void initState() {
+    super.initState();
+    switchValue1 = widget.isDarkMode;
+  }
+
+  @override
   Widget build(BuildContext context) {
+    final isDarkMode = Theme.of(context).brightness == Brightness.dark;
+
     return CupertinoPageScaffold(
-      navigationBar: const CupertinoNavigationBar(
-        leading: Icon(Icons.settings),
-        middle: Text('Cài đặt'),
+      navigationBar: CupertinoNavigationBar(
+        leading: Icon(
+          Icons.settings,
+          color: isDarkMode ? CupertinoColors.white : CupertinoColors.black,
+        ),
+        middle: Text(
+          'Cài đặt',
+          style: TextStyle(
+            color: isDarkMode ? CupertinoColors.white : CupertinoColors.black,
+          ),
+        ),
+        backgroundColor: isDarkMode ? CupertinoColors.black : CupertinoColors.white,
+        border: Border(
+          bottom: BorderSide(
+            color: isDarkMode ? CupertinoColors.white.withOpacity(0.2) : CupertinoColors.black.withOpacity(0.2),
+            width: 0.0,
+          ),
+        ),
       ),
       child: Padding(
-        padding: const EdgeInsets.fromLTRB(10, 100, 10, 0),
+        padding: const EdgeInsets.fromLTRB(10, 10, 10, 0),
         child: Column(
           mainAxisAlignment: MainAxisAlignment.start,
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -30,6 +60,7 @@ class _SettingsTabState extends State<SettingsTab> {
               setState(() {
                 switchValue1 = value;
               });
+              widget.onThemeChanged(value);
             }),
             _buildSwitch('Tùy chọn 2', switchValue2, (bool value) {
               setState(() {

@@ -45,6 +45,7 @@ class _NowPlayingPageState extends State<NowPlayingPage>
   double _currentAnimationPosition = 0.0;
   bool _isShuffle = false;
   late LoopMode _loopMode;
+  bool _isFavorite = false;
 
   @override
   void initState() {
@@ -70,13 +71,29 @@ class _NowPlayingPageState extends State<NowPlayingPage>
     final screenWidth = MediaQuery.of(context).size.width;
     const delta = 64;
     final radius = (screenWidth - delta) / 2;
+    final isDarkMode = Theme.of(context).brightness == Brightness.dark;
 
     return CupertinoPageScaffold(
         navigationBar: CupertinoNavigationBar(
-          middle: const Text('Now Playing'),
-          trailing: IconButton(
-            onPressed: () {},
-            icon: const Icon(Icons.more_vert_sharp),
+          leading: Icon(
+            Icons.arrow_back,
+            color: isDarkMode ? CupertinoColors.white : CupertinoColors.black,
+          ),
+          middle: Text(
+            'Nghe Nhạc',
+            style: TextStyle(
+              color: isDarkMode ? CupertinoColors.white : CupertinoColors.black,
+            ),
+          ),
+          backgroundColor:
+              isDarkMode ? CupertinoColors.black : CupertinoColors.white,
+          border: Border(
+            bottom: BorderSide(
+              color: isDarkMode
+                  ? CupertinoColors.white.withOpacity(0.2)
+                  : CupertinoColors.black.withOpacity(0.2),
+              width: 0.0,
+            ),
           ),
         ),
         child: Scaffold(
@@ -112,6 +129,7 @@ class _NowPlayingPageState extends State<NowPlayingPage>
                     ),
                   ),
                 ),
+                // Share icon button
                 Padding(
                   padding: const EdgeInsets.only(top: 64, bottom: 16),
                   child: SizedBox(
@@ -119,7 +137,90 @@ class _NowPlayingPageState extends State<NowPlayingPage>
                       mainAxisAlignment: MainAxisAlignment.spaceAround,
                       children: [
                         IconButton(
-                          onPressed: () {},
+                          onPressed: () {
+                            showModalBottomSheet(
+                                context: context,
+                                builder: (BuildContext) {
+                                  return ClipRRect(
+                                    borderRadius: const BorderRadius.vertical(
+                                        top: Radius.circular(18)
+                                    ),
+                                    child: Container(
+                                      height: 200,
+                                      color: isDarkMode ? Colors.black12 : Colors.white,
+                                      child: Center(
+                                        child: Column(
+                                          mainAxisAlignment:
+                                              MainAxisAlignment.center,
+                                          mainAxisSize: MainAxisSize.min,
+                                          children: <Widget>[
+                                            const Text(
+                                              'Chia sẻ cho mọi người.',
+                                              style: TextStyle(
+                                                  fontWeight: FontWeight.bold),
+                                            ),
+                                            const SizedBox(height: 20),
+                                            Row(
+                                              mainAxisAlignment:
+                                                  MainAxisAlignment.spaceEvenly,
+                                              children: <Widget>[
+                                                Column(
+                                                  children: [
+                                                    IconButton(
+                                                      icon: Image.asset(
+                                                        'assets/facebook.png',
+                                                        width: 50.0,
+                                                        height: 50.0,
+                                                      ),
+                                                      // Set the icon size here
+                                                      onPressed: () {
+                                                        // Handle Facebook share
+                                                      },
+                                                    ),
+                                                    const Text('Facebook')
+                                                  ],
+                                                ),
+                                                Column(
+                                                  children: [
+                                                    IconButton(
+                                                      icon: Image.asset(
+                                                        'assets/instagram.png',
+                                                        width: 50.0,
+                                                        height: 50.0,
+                                                      ),
+                                                      // Set the icon size here
+                                                      onPressed: () {
+                                                        // Handle Instagram share
+                                                      },
+                                                    ),
+                                                    const Text('Instagram')
+                                                  ],
+                                                ),
+                                                Column(
+                                                  children: [
+                                                    IconButton(
+                                                      icon: Image.asset(
+                                                        'assets/twitter.png',
+                                                        width: 50.0,
+                                                        height: 50.0,
+                                                      ),
+                                                      // Set the icon size here
+                                                      onPressed: () {
+                                                        // Handle Twitter share
+                                                      },
+                                                    ),
+                                                    const Text('Twitter')
+                                                  ],
+                                                )
+                                              ],
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                    ),
+                                  );
+                                });
+                          },
                           icon: const Icon(Icons.share_outlined),
                           color: Colors.blueAccent,
                         ),
@@ -146,10 +247,11 @@ class _NowPlayingPageState extends State<NowPlayingPage>
                             )
                           ],
                         ),
-                        IconButton(
-                          onPressed: () {},
-                          icon: const Icon(Icons.favorite_outline),
-                          color: Colors.blueAccent,
+                        MediaButtonControl(
+                          function: _setFavorite,
+                          icon: Icons.favorite_outline,
+                          color: _getFavoriteColor(),
+                          size: 24,
                         )
                       ],
                     ),
@@ -300,6 +402,33 @@ class _NowPlayingPageState extends State<NowPlayingPage>
 
   Color? _getShuffleColor() {
     return _isShuffle ? Colors.blue : Colors.grey;
+  }
+
+  void _setFavorite() {
+    setState(() {
+      _isFavorite = !_isFavorite;
+
+      // Show a SnackBar when the favorite status changes
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            _isFavorite ? 'Đã thêm vào bài hát yêu thích' : 'Đã xóa khỏi bài hát yêu thích',
+            style: const TextStyle(fontSize: 16, color: Colors.white), // Customize the text style
+          ),
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(20),
+          ),
+          margin: const EdgeInsets.fromLTRB(20, 0, 20, 40),
+          backgroundColor: Colors.blueAccent,
+          duration: const Duration(seconds: 2),
+        ),
+      );
+    });
+  }
+
+  Color? _getFavoriteColor() {
+    return _isFavorite ? Colors.blue : Colors.grey;
   }
 
   void _setNextSong() {

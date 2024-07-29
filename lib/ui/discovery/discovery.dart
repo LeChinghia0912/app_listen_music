@@ -6,22 +6,30 @@ class DiscoveryTab extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDarkMode = Theme.of(context).brightness == Brightness.dark;
+
     return CupertinoPageScaffold(
       navigationBar: CupertinoNavigationBar(
-        middle: const Text('Khám phá'),
-        leading: CupertinoButton(
-          padding: EdgeInsets.zero,
-          onPressed: () {
-            // Add your onPressed logic here
-          },
-          child: const Icon(
-            CupertinoIcons.back,
-            color: Colors.black,
+        leading: Icon(
+          Icons.album,
+          color: isDarkMode ? CupertinoColors.white : CupertinoColors.black,
+        ),
+        middle: Text(
+          'Khám Phá',
+          style: TextStyle(
+            color: isDarkMode ? CupertinoColors.white : CupertinoColors.black,
+          ),
+        ),
+        backgroundColor: isDarkMode ? CupertinoColors.black : CupertinoColors.white,
+        border: Border(
+          bottom: BorderSide(
+            color: isDarkMode ? CupertinoColors.white.withOpacity(0.2) : CupertinoColors.black.withOpacity(0.2),
+            width: 0.0,
           ),
         ),
       ),
       child: ListView(
-        padding: const EdgeInsets.fromLTRB(10, 100, 10, 0),
+        padding: const EdgeInsets.fromLTRB(10, 10, 10, 0),
         children: [
           _buildSectionTitle('Playlist nổi bật'),
           _buildPlaylistCard(

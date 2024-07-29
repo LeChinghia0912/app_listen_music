@@ -66,3 +66,6 @@ flutter:
   assets:
     - assets/songs.json
     - assets/zing3.png
+    - assets/facebook.png
+    - assets/instagram.png
+    - assets/twitter.png

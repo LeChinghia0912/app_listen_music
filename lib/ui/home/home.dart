@@ -9,19 +9,32 @@ import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 
 // widget Chính MusicApp.
-class MusicApp extends StatelessWidget {
+class MusicApp extends StatefulWidget {
   const MusicApp({super.key});
+
+  @override
+  _MusicAppState createState() => _MusicAppState();
+}
+
+class _MusicAppState extends State<MusicApp> {
+  bool _isDarkMode = false;
+
+  void _toggleTheme(bool isDarkMode) {
+    setState(() {
+      _isDarkMode = isDarkMode;
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
     // Xây dựng MaterialApp chính.
     return MaterialApp(
       title: 'MusicApp',
-      theme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(seedColor: Colors.blueAccent),
-        useMaterial3: true,
+      theme: _isDarkMode ? ThemeData.dark() : ThemeData.light(),
+      home: MusicHomePage(
+        onThemeChanged: _toggleTheme,
+        isDarkMode: _isDarkMode,
       ),
-      home: const MusicHomePage(),
       debugShowCheckedModeBanner: false,
     );
   }
@@ -29,7 +42,14 @@ class MusicApp extends StatelessWidget {
 
 // Trang chủ của ứng dụng với quản lý trạng thái.
 class MusicHomePage extends StatefulWidget {
-  const MusicHomePage({super.key});
+  final Function(bool) onThemeChanged;
+  final bool isDarkMode;
+
+  const MusicHomePage({
+    required this.onThemeChanged,
+    required this.isDarkMode,
+    super.key,
+  });
 
   @override
   State<MusicHomePage> createState() => _MusicHomePageState();
@@ -37,21 +57,35 @@ class MusicHomePage extends StatefulWidget {
 
 class _MusicHomePageState extends State<MusicHomePage> {
   // Định nghĩa các tab cho thanh điều hướng.
-  final List<Widget> _tabs = [
-    const HomeTab(),
-    const DiscoveryTab(),
-    const AccountTab(),
-    const SettingsTab(),
-  ];
+  late final List<Widget> _tabs;
+
+  @override
+  void initState() {
+    super.initState();
+    _tabs = [
+      HomeTab(
+        onThemeChanged: widget.onThemeChanged,
+        isDarkMode: widget.isDarkMode,
+      ),
+      const DiscoveryTab(),
+      const AccountTab(),
+      SettingsTab(
+        onThemeChanged: widget.onThemeChanged,
+        isDarkMode: widget.isDarkMode,
+      ),
+    ];
+  }
 
   @override
   Widget build(BuildContext context) {
+    final isDarkMode = Theme.of(context).brightness == Brightness.dark;
+
     // Xây dựng điều hướng theo phong cách Cupertino.
     return CupertinoPageScaffold(
       child: CupertinoTabScaffold(
         tabBar: CupertinoTabBar(
           activeColor: Colors.blue,
-          inactiveColor: Colors.black,
+          inactiveColor: isDarkMode ? Colors.white : Colors.black,
           backgroundColor: Theme.of(context).colorScheme.onInverseSurface,
           // Khởi tạo item cho thanh điều hướng
           items: const [
@@ -74,18 +108,42 @@ class _MusicHomePageState extends State<MusicHomePage> {
 
 // Widget tab Trang chủ.
 class HomeTab extends StatelessWidget {
-  const HomeTab({super.key});
+  final Function(bool) onThemeChanged;
+  final bool isDarkMode;
+
+  const HomeTab({
+    required this.onThemeChanged,
+    required this.isDarkMode,
+    super.key,
+  });
 
   @override
   Widget build(BuildContext context) {
+    final isDarkMode = Theme.of(context).brightness == Brightness.dark;
     // Xây dựng trang theo Cupertino cho tab Trang chủ.
-    return const CupertinoPageScaffold(
+    return CupertinoPageScaffold(
       navigationBar: CupertinoNavigationBar(
-        leading: Icon(Icons.home),
-        middle: Text('Trang chủ'),
+        leading: Icon(
+          Icons.home,
+          color: isDarkMode ? CupertinoColors.white : CupertinoColors.black,
+        ),
+        middle: Text(
+          'Trang chủ',
+          style: TextStyle(
+            color: isDarkMode ? CupertinoColors.white : CupertinoColors.black,
+          ),
+        ),
+        backgroundColor: isDarkMode ? CupertinoColors.black : CupertinoColors.white,
+        border: Border(
+          bottom: BorderSide(
+            color: isDarkMode ? CupertinoColors.white.withOpacity(0.2) : CupertinoColors.black.withOpacity(0.2),
+            width: 0.0,
+          ),
+        ),
       ),
-      child: Center(
-        child: HomeTabPage(),
+      child: HomeTabPage(
+        onThemeChanged: onThemeChanged,
+        isDarkMode: isDarkMode,
       ),
     );
   }
@@ -93,7 +151,14 @@ class HomeTab extends StatelessWidget {
 
 // Trang tab Trang chủ với quản lý trạng thái.
 class HomeTabPage extends StatefulWidget {
-  const HomeTabPage({super.key});
+  final Function(bool) onThemeChanged;
+  final bool isDarkMode;
+
+  const HomeTabPage({
+    required this.onThemeChanged,
+    required this.isDarkMode,
+    super.key,
+  });
 
   @override
   State<HomeTabPage> createState() => _HomeTabPageState();
@@ -194,7 +259,7 @@ class _HomeTabPageState extends State<HomeTabPage> {
                   mainAxisAlignment: MainAxisAlignment.center,
                   mainAxisSize: MainAxisSize.min,
                   children: <Widget>[
-                    const Text('Danh sách phát'),
+                    const Text('Danh sách phát.'),
                     ElevatedButton(
                         onPressed: () => Navigator.pop(context),
                         child: const Text('Thêm'))
